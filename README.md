@@ -9,10 +9,11 @@
 
 ## Установка на новой машине
 ```bash
-git clone git@github.com:MubiZero/claude-working-style.git ~/claude-working-style
+gh repo clone MubiZero/claude-working-style ~/claude-working-style
 cd ~/claude-working-style
 ./install.sh
 ```
+(или `git clone https://github.com/MubiZero/claude-working-style.git ~/claude-working-style`)
 
 `install.sh` делает симлинк `~/.claude/WORKING-STYLE.md → этот репозиторий` и дописывает строку
 `@WORKING-STYLE.md` в `~/.claude/CLAUDE.md`, если её там ещё нет. Поскольку это симлинк —
