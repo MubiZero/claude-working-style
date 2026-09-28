@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# SubagentStart hook: кладёт WORKING-STYLE.md в контекст каждого субагента.
-# Главные сессии получают файл через ~/.claude/CLAUDE.md (@WORKING-STYLE.md),
-# субагенты — нет, поэтому им он подаётся здесь.
+# SessionStart/SubagentStart hook: кладёт WORKING-STYLE.md в контекст.
+# Один скрипт на оба события — имя события приходит первым аргументом.
 set -euo pipefail
 
-STYLE="${HOME}/.claude/WORKING-STYLE.md"
+EVENT="${1:?usage: inject-working-style.sh <SessionStart|SubagentStart>}"
+STYLE="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/WORKING-STYLE.md"
 [ -r "$STYLE" ] || exit 0
 
-python3 - "$STYLE" <<'PY'
+python3 - "$STYLE" "$EVENT" <<'PY'
 import json, sys
 
-body = open(sys.argv[1], encoding="utf-8").read()
+path, event = sys.argv[1], sys.argv[2]
+body = open(path, encoding="utf-8").read()
 header = (
     "Рабочий стиль пользователя — действует и на субагентов.\n"
     "Приоритет при конфликте: инструкция в самой задаче → CLAUDE.md проекта → эти правила.\n\n"
@@ -18,9 +19,9 @@ header = (
 
 print(json.dumps({
     "hookSpecificOutput": {
-        "hookEventName": "SubagentStart",
+        "hookEventName": event,
         "additionalContext": header + body,
     },
     "suppressOutput": True,
-}, ensure_ascii=False))
+}))
 PY

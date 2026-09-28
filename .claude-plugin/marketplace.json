@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-working-style",
+  "description": "Персональный рабочий стиль для Claude Code",
+  "owner": {
+    "name": "MubiZero",
+    "url": "https://github.com/MubiZero"
+  },
+  "plugins": [
+    {
+      "name": "claude-working-style",
+      "source": "./",
+      "description": "Правила общения, планов, автономности, кода и памяти — для главной сессии и субагентов",
+      "category": "productivity"
+    }
+  ]
+}
