@@ -5,6 +5,7 @@
 
 ## Что внутри
 - **`WORKING-STYLE.md`** — сами правила (применяются во всех проектах).
+- **`CASES.md`** — исторические кейсы к правилам (в контекст сессий не загружаются).
 - **`.claude-plugin/marketplace.json`, `.claude-plugin/plugin.json`** — репозиторий одновременно
   marketplace и плагин, ставится через `/plugin install`.
 - **`hooks/hooks.json`, `hooks/inject-working-style.sh`** — `SessionStart`/`SubagentStart`-хук:
