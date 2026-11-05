@@ -1,14 +1,21 @@
 {
-  "name": "claude-working-style",
-  "displayName": "Claude Working Style",
-  "version": "1.0.0",
-  "description": "Персональный рабочий стиль для Claude Code — правила общения, планов, автономности, чистоты кода и памяти",
+  "name": "working-style",
+  "displayName": "Working Style",
+  "version": "2.0.0",
+  "description": "Рабочий стиль для Claude Code: короткое ядро правил в каждой сессии и у субагентов, полные правила скиллом по требованию, стиль ответов «Кратко» и хуки (без длинных ответов и объявлений вместо дела)",
   "author": {
     "name": "MubiZero",
     "url": "https://github.com/MubiZero"
   },
   "homepage": "https://github.com/MubiZero/claude-working-style",
   "repository": "https://github.com/MubiZero/claude-working-style",
-  "keywords": ["working-style", "hooks", "claude-code"],
-  "hooks": "./hooks/hooks.json"
+  "keywords": [
+    "working-style",
+    "output-style",
+    "hooks",
+    "skills",
+    "claude-code"
+  ],
+  "hooks": "./hooks/hooks.json",
+  "license": "MIT"
 }
