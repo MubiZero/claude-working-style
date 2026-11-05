@@ -1,70 +1,32 @@
-# claude-working-style
+# Working Style
 
-Мой персональный рабочий стиль для Claude Code — правила общения, ведения планов,
-автономности, чистоты кода и памяти. Приватный, подтягивается на любой машине.
+Как ИИ-агент работает со мной: коротко по-русски, проверено до «готово», объём — дешёвым агентам.
+
+## Установка
+
+Claude Code (на любом устройстве):
+
+```bash
+claude plugin marketplace add MubiZero/claude-working-style && claude plugin install working-style@mubizero-working-style
+```
+
+Codex, Gemini CLI и другие ИИ, которые читают `AGENTS.md`:
+
+```bash
+git clone https://github.com/MubiZero/claude-working-style ~/claude-working-style && ~/claude-working-style/install.sh
+```
 
 ## Что внутри
-- **`WORKING-STYLE.md`** — сами правила (применяются во всех проектах).
-- **`CASES.md`** — исторические кейсы к правилам (в контекст сессий не загружаются).
-- **`.claude-plugin/marketplace.json`, `.claude-plugin/plugin.json`** — репозиторий одновременно
-  marketplace и плагин, ставится через `/plugin install`.
-- **`hooks/hooks.json`, `hooks/inject-working-style.sh`** — `SessionStart`/`SubagentStart`-хук:
-  подаёт правила и главной сессии, и субагентам.
-- **`install.sh`** — альтернатива без marketplace: симлинк файла в `~/.claude/` и строка
-  в `~/.claude/CLAUDE.md`.
 
-## Как правила доезжают до агента
-Способ зависит от установки:
-
-| Кто | Установка через плагин | Ручная установка (`install.sh`) |
+| Часть | Где | Когда действует |
 |---|---|---|
-| Главная сессия Claude Code | хук `SessionStart` → `hookSpecificOutput.additionalContext` | `~/.claude/CLAUDE.md` → строка `@WORKING-STYLE.md` |
-| Субагенты (Task / Agent tool) | хук `SubagentStart` → `hookSpecificOutput.additionalContext` | хук `SubagentStart` (симлинк в `~/.claude/hooks/`) |
+| Ядро правил | `core.md` | в каждой сессии и у каждого субагента (хук `SessionStart` / `SubagentStart`, ~100 токенов) |
+| Полные правила и кейсы | скилл `working-style` | подгружаются, когда задача их касается |
+| Стиль ответов «Кратко» | `output-styles/kratko.md` | всегда, пока плагин включён (`force-for-plugin`) |
+| Ход не кончается объявлением | хук `Stop` | шаг «дальше беру X» без начала — ход не закрывается |
+| Длинный ответ | хук `Stop` + `UserPromptSubmit` | напоминание «2–3 строки» перед следующим ответом |
+| Другие ИИ | `AGENTS.md` | `install.sh` кладёт его в `~/.codex/AGENTS.md` и `~/.gemini/GEMINI.md` |
 
-Субагент стартует со своим системным промптом и глобальный `CLAUDE.md` не наследует —
-поэтому для него правила всегда кладёт хук. Файл при этом один и тот же. Если `~/.claude/CLAUDE.md` уже подключает
-его через `@WORKING-STYLE.md`, `SessionStart`-хук молчит: главная сессия иначе получила бы файл дважды.
+Личное (стек, секреты, терминал) в плагин не входит: это `~/.claude/CLAUDE.md` и локальные скиллы.
 
-## Структура правил
-Файл разбит на три слоя по убыванию жёсткости:
-
-| Слой | Что это | Как применяется |
-|---|---|---|
-| **R** — красные линии | не обходятся никогда | конфликт с просьбой → агент говорит и ждёт подтверждения |
-| **T** — правила с триггером | «когда X → делай Y» | триггер не сработал — правило молчит |
-| **L** — линзы | способ думать, не чеклист | по смыслу задачи |
-
-Приоритет при конфликте: прямая просьба в чате → `CLAUDE.md` проекта → R → T → L.
-
-## Установка как плагин (рекомендуется)
-Репозиторий сам себе marketplace — плагин лежит в корне.
-
-```
-/plugin marketplace add MubiZero/claude-working-style
-/plugin install claude-working-style@claude-working-style
-```
-
-Плагин сам вешает `SessionStart` и `SubagentStart` хуки (`hooks/hooks.json`) — они кладут
-`WORKING-STYLE.md` в контекст главной сессии и субагентов через `${CLAUDE_PLUGIN_ROOT}`.
-`~/.claude/CLAUDE.md` и симлинки плагин не трогает.
-
-Обновление: `/plugin marketplace update claude-working-style` (или переустановить плагин).
-
-## Установка вручную (без marketplace)
-```bash
-gh repo clone MubiZero/claude-working-style ~/claude-working-style
-cd ~/claude-working-style
-./install.sh
-```
-(или `git clone https://github.com/MubiZero/claude-working-style.git ~/claude-working-style`)
-
-`install.sh` делает симлинк `~/.claude/WORKING-STYLE.md → этот репозиторий` и дописывает строку
-`@WORKING-STYLE.md` в `~/.claude/CLAUDE.md`, если её там ещё нет. Поскольку это симлинк —
-`git pull` в этой папке сразу обновляет правила во всех проектах.
-
-## Обновить правила
-```bash
-cd ~/claude-working-style
-git pull
-```
-Или отредактировать `WORKING-STYLE.md`, затем `git commit` + `git push`.
+Правка правил — только в `core.md` и `skills/working-style/`; `AGENTS.md` собирается из `core.md` (`install.sh`).
