@@ -37,7 +37,14 @@ def last_text(path):
     return text.strip()
 
 
-ASKED_DETAIL = re.compile(r"подробн|почему|детал|распиши|полност|объясни|зачем|explain|detail|why", re.IGNORECASE)
+ASKED_DETAIL = re.compile(
+    r"подробн|почему|детал|распиши|полност|объясни|зачем|хронолог|отч[её]т|разбор|сравни|составь|предложи|найди корень"
+    r"|explain|detail|why|report|compare",
+    re.IGNORECASE,
+)
+
+# A question that offers choices as text («1) … 2) …» in a line or as a list) instead of the AskUserQuestion tool.
+TEXT_OPTIONS = re.compile(r"(?:^|[\s(])1\)\s+\S.*?(?:\n|\s)2\)\s+\S", re.DOTALL)
 
 
 def last_user_text(path):
@@ -81,6 +88,14 @@ def main():
         # the prompt hook (length-note.py) before the next answer.
         with open(NOTE, "w") as f:
             f.write("1")
+    tail = text[-600:]
+    if "?" in tail and TEXT_OPTIONS.search(tail):
+        print(
+            "Вопрос с вариантами написан текстом «1) … 2) …». Развилку задают интерфейсом: вызови AskUserQuestion "
+            "(2–4 варианта, твой выбор первым с «(Recommended)», при необходимости preview) и спрашивай про цель, а не про шаг.",
+            file=sys.stderr,
+        )
+        return 2
     if text.rstrip().endswith("?"):
         return 0
     last = [x for x in re.split(r"(?<=[.!])\s+|\n+", text) if x.strip()][-2:]  # the last two sentences

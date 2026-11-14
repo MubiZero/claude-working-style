@@ -30,3 +30,5 @@ git clone https://github.com/MubiZero/claude-working-style ~/claude-working-styl
 Личное (стек, секреты, терминал) в плагин не входит: это `~/.claude/CLAUDE.md` и локальные скиллы.
 
 Правка правил — только в `core.md` и `skills/working-style/`; `AGENTS.md` собирается из `core.md` (`install.sh`).
+
+Проверка согласованности (блок «Каналы» в ядре и стиле, запрещённые формулы, AGENTS.md, хук на вариантах текстом): `./check-consistency.sh`; `./check-consistency.sh sync` — пересобрать.
