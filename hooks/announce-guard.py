@@ -46,14 +46,27 @@ def note_path(session_id):
     return LEGACY_NOTE
 
 
+def tail_lines(path, max_bytes=65536):
+    """Read only the last max_bytes of a JSONL transcript so Stop hook stays O(1) on huge sessions."""
+    with open(path, "rb") as f:
+        f.seek(0, os.SEEK_END)
+        size = f.tell()
+        offset = max(0, size - max_bytes)
+        f.seek(offset, os.SEEK_SET)
+        raw = f.read().decode("utf-8", errors="replace")
+    lines = raw.splitlines()
+    if offset > 0 and lines:
+        lines = lines[1:]  # drop partial first line
+    return lines
+
+
 def parse_transcript(path):
     """Returns (last_assistant_text, last_user_text, edited_after_verify_in_current_turn)."""
     text = ""
     user_text = ""
     edited_since_verify = False
 
-    with open(path, encoding="utf-8") as f:
-        for line in f:
+    for line in tail_lines(path):
             try:
                 e = json.loads(line)
             except ValueError:
