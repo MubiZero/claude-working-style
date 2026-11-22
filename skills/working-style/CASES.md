@@ -1,22 +1,7 @@
-# Исторические кейсы (для интуиции, в контекст сессий не загружаются)
+# Historical Cases (Context Only, Not Loaded in Sessions)
 
-Живут отдельно от `WORKING-STYLE.md`: правила действуют из основного файла, а кейсы только
-объясняют, откуда они взялись.
-
-- **Хардкод при живой инфраструктуре.** Operator сидел на хардкод-строках, притом что
-  `@afk4/i18n` был живой. Правильный ход — поднять это, а не добавить ещё хардкода. → T15, T16.
-- **Обрывки строк и ручная плюрализация.** Строки, порезанные на куски, `pluralRu` и склейка в
-  JSX. Перенести «как есть» значит закрепить проблему; правильный ход — предложить ICU
-  MessageFormat: цельная фраза, плейсхолдеры, плюрал-формы на каждый язык. → L7.
-- **Паритет каталога копией.** Скопировать ru в en и tg, чтобы паритет-тест позеленел, —
-  подделка: CI доволен, половина каталога враньё. → R2.
-- **Кнопка есть у одной роли и нет у соседней.** «Сдать» на карточке задачи видна только
-  исполнителю; у прораба, открывшего чужую просроченную работу, была только «Закрыть без сдачи»
-  без заметки и без фото. Про разрыв давно знал код, а вслух он прозвучал только когда в него
-  упёрся живой заказчик на проде. Правильный ход — назвать его в момент, когда кнопки для одной
-  роли уже пишутся, а не постфактум. → T18.
-- **Раздел как круг.** Предложил вынести рабочие объекты в отдельную вкладку, оценив один экран; рабочий цикл человека
-  (создал → увидел, что с ним → закончил → следующий) не прогнал. Вышло «зайди туда, нажми там, чтобы открыть здесь, и иди
-  смотреть созданное» (кассовое приложение: заказы). Владельцу пришлось сказать, хотя до этого он уже слушал боль ресторатора. Правильный ход — выписать цикл,
-  посчитать уходы с главного экрана и отвергнуть вариант до показа. → T23 «Поток», T24, T25.
-
+- **Hardcoded strings next to live i18n (T15, T16):** Operator UI used hardcoded strings while `@afk4/i18n` was active. Fix the root and use the catalog instead of adding more hardcode.
+- **Fragmented strings & manual pluralization (L7):** Concatenated JSX fragments with custom `pluralRu` helpers break translation. Propose full-sentence ICU MessageFormat instead of copying the workaround.
+- **Fake locale parity by copying Russian into English/Tajik (R2):** Turns CI green while shipping broken UI. Leave the gap visible or translate properly.
+- **Role asymmetry discovered in production (T18):** "Submit work" button existed for the worker, while the foreman viewing an overdue task only had "Close without submission" with no note or photo. Always walk adjacent roles when building role-gated actions.
+- **Separate tab breaking the user's core loop (T23, T24, T25):** Moving active POS orders to a separate tab forced cashiers into a multi-screen detour on every order. Trace the 5–8 step loop and count main-screen departures before proposing navigation changes.

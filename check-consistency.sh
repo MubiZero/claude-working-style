@@ -17,7 +17,7 @@ if [ "${1:-}" = "sync" ]; then
   { printf '%s\n\n' '<!-- Generated from core.md by install.sh; edit core.md. -->'
     cat core.md; } > rules/AGENTS.md
   { printf '%s\n\n' '<!-- Generated from core.md by install.sh; edit core.md. -->'
-    sed 's#скилл `working-style`#файл skills/working-style/WORKING-STYLE.md рядом с этим#' core.md; } > AGENTS.md
+    sed 's#skill `working-style`#file skills/working-style/WORKING-STYLE.md next to this#' core.md; } > AGENTS.md
   echo "✓ маршрутизация скопирована в стиль, AGENTS.md и rules/AGENTS.md пересобраны"
 fi
 
@@ -31,7 +31,7 @@ if rg -n "вариантами «1\)|вариантами 1/2/3|варианты
 fi
 
 # 3. AGENTS.md и rules/AGENTS.md собраны из актуального core.md.
-expected="$(printf '%s\n\n' '<!-- Generated from core.md by install.sh; edit core.md. -->'; sed 's#скилл `working-style`#файл skills/working-style/WORKING-STYLE.md рядом с этим#' core.md)"
+expected="$(printf '%s\n\n' '<!-- Generated from core.md by install.sh; edit core.md. -->'; sed 's#skill `working-style`#file skills/working-style/WORKING-STYLE.md next to this#' core.md)"
 [ "$expected" = "$(cat AGENTS.md)" ] || bad "AGENTS.md не равен сборке из core.md (./check-consistency.sh sync)"
 expected_rules="$(printf '%s\n\n' '<!-- Generated from core.md by install.sh; edit core.md. -->'; cat core.md)"
 [ -f rules/AGENTS.md ] && [ "$expected_rules" = "$(cat rules/AGENTS.md)" ] || bad "rules/AGENTS.md не равен сборке из core.md (./check-consistency.sh sync)"

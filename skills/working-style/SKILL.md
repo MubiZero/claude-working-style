@@ -1,8 +1,9 @@
 ---
 name: working-style
-description: Полные правила рабочего стиля (слои R/T/L) и кейсы к ним. Читать, когда правило ядра неясно, при дизайне экрана или потока (T23–T25), планировании, автономной работе (T22) или споре о том, как поступить.
+description: Full working-style rules (R/T/L layers), prose anti-slop & cited fact-check protocol, and historical cases. Read when a core rule is unclear, before UI/flow design (T23-T25), planning, autonomous work (T22), or editing user-facing prose.
 ---
 
-Ядро правил уже в контексте (SessionStart / rules/AGENTS.md). Здесь — полная версия: [WORKING-STYLE.md](WORKING-STYLE.md),
-протокол редактуры прозы и фактчека — [ANTI-SLOP.md](ANTI-SLOP.md) (линтер текста: `scripts/prose_check.py`),
-кейсы к правилам — [CASES.md](CASES.md). Читай нужный раздел, не весь файл.
+Core rules are already loaded in context. Read only the section you need:
+- [WORKING-STYLE.md](WORKING-STYLE.md) — full R/T/L rules and T23–T25 design gates.
+- [ANTI-SLOP.md](ANTI-SLOP.md) — 4-class prose editing & cited fact-check protocol (`scripts/prose_check.py`).
+- [CASES.md](CASES.md) — real project postmortems behind the rules.

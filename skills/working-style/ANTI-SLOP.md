@@ -1,45 +1,30 @@
-# Протокол редактуры текста (Anti-Slop) и цитатного фактчека
+# Anti-Slop Prose Protocol & Cited Fact-Check
 
-Применяется ко всей редактируемой прозе для людей (UI-тексты, README, документация, описания PR, задачи, публичные страницы). Код, цитаты, формулы, URL, идентификаторы и разметка Markdown исключены.
+Applies to all editable human-facing prose (UI copy, READMEs, docs, PR descriptions, issues, public pages). Code, verbatim quotes, math, URLs, identifiers, and Markdown syntax are exempt.
 
-Быстрая автоматическая проверка файла или текста:
+Automated linter:
 ```bash
-python3 skills/working-style/scripts/prose_check.py <файл.md>
+python3 skills/working-style/scripts/prose_check.py <file.md>
 ```
 
----
+## 1. Four Prose Classes
 
-## 1. Четыре класса чистоты текста
+1. **Symbols (`symbols`):** No em-dashes (`—`), decorative emojis, stars, or exclamation marks for effect in editable prose or UI copy. Replace `—` with a comma, colon, period, or two lines.
+2. **Wording & Precision (`wording`):**
+   - Lock meaning first: preserve numbers, dates, exact titles, negations, and uncertainty qualifiers ("may", "preliminary"). Never turn "14 days" into "about two weeks" or turn a qualifier into a confident claim.
+   - Cut filler and meta-intros ("стоит отметить", "в этой статье", "как уже говорилось", "на самом деле", "довольно").
+   - Cut hype and bureaucratic nominalizations ("инновационный", "эффективный", "оптимизация процессов", "осуществляется выполнение")—replace with the concrete action or number supported by the source.
+3. **Syntax (`syntax`):**
+   - Name the actor and use the active voice when known ("Система проверяет подпись", not "Осуществляется проверка подписи системой"). Keep impersonal passive only when the actor is unknown.
+   - Dismantle AI rhetorical templates: **"не просто X, а Y"**, slogan **"не X, а Y"**, **"не только X, но и Y"**. Rebuild as direct assertions. Preserve informative technical contrast ("counts tokens, not words").
+4. **Coherence (`coherence`):** Connect adjacent sentences by cause, consequence, contrast, or clarification; keep one topic per paragraph; merge choppy sentences ("Сборка запускается после каждого коммита и занимает 30 секунд").
 
-### Класс 1. Символы (`symbols`)
-- **Правило:** В редактируемой прозе и UI-строках нет длинного тире (`—`), декоративных эмодзи, звёздочек и восклицательных знаков ради эффекта.
-- **Лечение:** Длинное тире замени запятой, двоеточием, точкой или переносом на две строки. Убери декоративные эмодзи и `!` («Готово! 🚀 Релиз вышел» → «Релиз вышел»).
+## 2. Cited Fact-Check & Hypothesis Protocol
 
-### Класс 2. Слова и точность (`wording`)
-- **Правило:**
-  1. **Фиксация смысла:** числа, даты, точные имена, отрицания и оговорки о неопределённости («может», «по предварительным данным») не искажаются. «Срок: 14 дней» не превращай в «около двух недель»; «не поддерживается» не смягчай в «может не поддерживаться»; оговорку источника не превращай в уверенное утверждение.
-  2. **Без воды и мета-вступлений:** убери «в этой статье», «стоит отметить», «как уже говорилось», «на самом деле», «в принципе», «довольно».
-  3. **Без рекламы и канцелярита:** сними «инновационный», «эффективный», «качественный», «оптимизация процессов», «осуществляется выполнение». Замени проверяемым действием или числом из источника.
-- **Лечение:** «Стоит отметить, что инновационное решение обеспечивает высокую эффективность» → «Сервис сокращает время сборки с 40 до 12 с» (только если источник это подтверждает).
-
-### Класс 3. Синтаксис (`syntax`)
-- **Правило:**
-  1. Называй деятеля и используй активный залог, когда деятель известен («Осуществляется проверка подписи системой» → «Система проверяет подпись»). Безличный пассив допустим, только когда деятель неизвестен («Подпись проверяется»).
-  2. Разбирай риторические штампы ИИ: **«не просто X, а Y»**, **«не X, а Y»** (когда это лозунг, а не техническое уточнение), **«не только X, но и Y»**, афоризмы-лозунги.
-- **Лечение:** Перестрой предложение в прямое утверждение: «Это не просто инструмент, а новая философия» → «Инструмент проверяет текст и возвращает список нарушений». Информативный контраст («считает не слова, а токены») сохраняй.
-
-### Класс 4. Связность (`coherence`)
-- **Правило:** Каждое предложение связано с соседним причиной, следствием, контрастом или уточнением; один абзац держит одну тему; вывод не повторяется дважды и не висит без основания.
-- **Лечение:** Объединяй рубленые предложения: «Сборка запускается после каждого коммита. Она занимает 30 секунд.» → «Сборка запускается после каждого коммита и занимает 30 секунд.»
-
----
-
-## 2. Протокол цитатного фактчека и гипотез
-
-1. **Сниппет поиска — только наводка.** Прежде чем ссылаться на внешний факт, версию, лимит или стандарт, открой сам документ.
-2. **Таблицы и числа — только с условием.** Число из таблицы цитируется вместе с заголовком колонки, единицей измерения и условием строки (например, не «лимит 24 КБ», а «лимит 24 КБ на один файл правил после раскрытия `@`-включений»).
-3. **Контрфакты.** Если в источнике есть исключение или обратное свидетельство — назови его рядом, не выбирай только удобную строку.
-4. **Факт vs Вывод vs Гипотеза:**
-   - **Факт** — прямая цитата или наблюдение команды (`файл:строка`, вывод команды, URL).
-   - **Вывод (inference)** — посылки + основание + заключение.
-   - **Гипотеза** — утверждение до чтения данных; обязана иметь **условие опровержения (falsifier)** («Гипотеза: запрос висит из-за блокировки таблицы; опровержение: в `pg_stat_activity` `wait_event_type` пуст»).
+1. **Search snippets are only leads:** open and read the primary source before citing versions, limits, or standards.
+2. **Numbers and tables require conditions:** quote any table number together with its column header, unit, and row condition.
+3. **Include counterevidence:** state caveats or contrary cases from the source alongside the main finding.
+4. **Fact vs Inference vs Hypothesis:**
+   - **Fact:** direct observation (`file:line`, command output, opened URL).
+   - **Inference:** premises + warrant + conclusion.
+   - **Hypothesis:** pre-verification claim; must carry an explicit **falsifier** (what observation would disprove it).

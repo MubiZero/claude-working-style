@@ -16,7 +16,7 @@ echo "✓ $REPO/rules/AGENTS.md"
 {
   printf '%s\n\n' '<!-- Generated from core.md by install.sh; edit core.md. -->'
   # For standalone AGENTS.md readers without skills, point at the file next to it.
-  sed 's#скилл `working-style`#файл skills/working-style/WORKING-STYLE.md рядом с этим#' "$REPO/core.md"
+  sed 's#skill `working-style`#file skills/working-style/WORKING-STYLE.md next to this#' "$REPO/core.md"
 } > "$REPO/AGENTS.md"
 echo "✓ $REPO/AGENTS.md"
 
