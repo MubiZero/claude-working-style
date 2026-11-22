@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Stop hook (Claude Code & Antigravity): the turn may not end long (more than 2-3 lines unasked) or on an announced next step («Дальше беру X», «Начинаю Y») that was never started.
-
-Supports both contracts:
-- Claude Code: stdin has `transcript_path`, `stop_hook_active`, `session_id`; blocks with exit code 2 and stderr message.
-- Antigravity: stdin has `transcriptPath`, `continuationActive`, `conversationId`, `terminationReason`, `lastUserInput`; blocks with exit code 0 and JSON `{"decision": "continue", "reason": "..."}` on stdout.
+"""Stop hook (Claude Code & Antigravity):
+1) The turn may not end long (>4 lines or >450 chars unasked) -> marks note for next turn reminder.
+2) The turn may not offer choices as plain text («1) … 2) …») instead of AskUserQuestion / ask_question.
+3) The turn may not end on an announced next step («Дальше беру X», «Начинаю Y») that was never started.
+4) R1 stale-verification guard: if files were edited in this turn AFTER the last verification command (or with no
+   verification command after the edit) and the response claims completion («Готово», «Починил», «Исправил», «Всё работает»)
+   without stating what was not checked («тесты не гонял», «не проверял», «проверено анализатором»), block stop once.
 """
 import json
 import os
@@ -25,8 +27,16 @@ ASKED_DETAIL = re.compile(
     re.IGNORECASE,
 )
 
-# A question that offers choices as text («1) … 2) …» in a line or as a list) instead of AskUserQuestion / ask_question.
 TEXT_OPTIONS = re.compile(r"(?:^|[\s(])1\)\s+\S.*?(?:\n|\s)2\)\s+\S", re.DOTALL)
+
+DONE_CLAIM = re.compile(r"(?:^|[\s.,!«\"])(готово|починил|исправил|всё работает|задача выполнена)(?:$|[\s.,!—:»\"])", re.IGNORECASE)
+HONEST_UNCHECKED = re.compile(
+    r"(не гонял|не проверял|не запускал|без прогона|без проверки|не проверено|проверено анализатором|анализатор чист)",
+    re.IGNORECASE,
+)
+
+EDIT_TOOLS = {"edit_file", "write_file", "Edit", "MultiEdit", "Write", "NotebookEdit"}
+VERIFY_TOOLS = {"run_command", "Bash"}
 
 
 def note_path(session_id):
@@ -36,8 +46,12 @@ def note_path(session_id):
     return LEGACY_NOTE
 
 
-def last_text(path):
+def parse_transcript(path):
+    """Returns (last_assistant_text, last_user_text, edited_after_verify_in_current_turn)."""
     text = ""
+    user_text = ""
+    edited_since_verify = False
+
     with open(path, encoding="utf-8") as f:
         for line in f:
             try:
@@ -45,50 +59,54 @@ def last_text(path):
             except ValueError:
                 continue
             t = e.get("type")
-            if t == "assistant":
-                parts = [
-                    c.get("text", "")
-                    for c in e.get("message", {}).get("content", [])
-                    if isinstance(c, dict) and c.get("type") == "text"
-                ]
+            if t == "user":
+                c = e.get("message", {}).get("content")
+                if isinstance(c, str):
+                    user_text = c
+                    edited_since_verify = False
+                elif isinstance(c, list):
+                    txts = [p.get("text", "") for p in c if isinstance(p, dict) and p.get("type") == "text"]
+                    if any(p.strip() for p in txts):
+                        user_text = "\n".join(txts)
+                        edited_since_verify = False
+            elif t == "USER_INPUT":
+                c = e.get("content", "")
+                if isinstance(c, str) and c.strip():
+                    user_text = c
+                    edited_since_verify = False
+            elif t == "assistant":
+                content = e.get("message", {}).get("content", [])
+                parts = []
+                for c in content:
+                    if not isinstance(c, dict):
+                        continue
+                    if c.get("type") == "text":
+                        parts.append(c.get("text", ""))
+                    elif c.get("type") == "tool_use":
+                        tname = c.get("name", "")
+                        if tname in EDIT_TOOLS:
+                            edited_since_verify = True
+                        elif tname in VERIFY_TOOLS:
+                            edited_since_verify = False
                 if any(p.strip() for p in parts):
                     text = "\n".join(parts)
             elif t == "PLANNER_RESPONSE":
                 c = e.get("content", "")
                 if isinstance(c, str) and c.strip():
                     text = c
-    return text.strip()
+                for tc in e.get("tool_calls", []) or []:
+                    if not isinstance(tc, dict):
+                        continue
+                    tname = tc.get("name", "") or tc.get("tool_name", "")
+                    if tname in EDIT_TOOLS:
+                        edited_since_verify = True
+                    elif tname in VERIFY_TOOLS:
+                        edited_since_verify = False
 
-
-def last_user_text(path, fallback=""):
-    text = fallback or ""
-    try:
-        with open(path, encoding="utf-8") as f:
-            for line in f:
-                try:
-                    e = json.loads(line)
-                except ValueError:
-                    continue
-                t = e.get("type")
-                if t == "user":
-                    c = e.get("message", {}).get("content")
-                    if isinstance(c, str):
-                        text = c
-                    elif isinstance(c, list):
-                        parts = [p.get("text", "") for p in c if isinstance(p, dict) and p.get("type") == "text"]
-                        if any(p.strip() for p in parts):
-                            text = "\n".join(parts)
-                elif t == "USER_INPUT":
-                    c = e.get("content", "")
-                    if isinstance(c, str) and c.strip():
-                        text = c
-    except OSError:
-        pass
-    return text
+    return text.strip(), user_text, edited_since_verify
 
 
 def too_long(text):
-    """More than four non-empty lines or about 450 characters: the owner reads two or three lines."""
     lines = [l for l in text.splitlines() if l.strip()]
     return len(lines) > 4 or len(text) > 450
 
@@ -125,13 +143,15 @@ def main():
     if not t_path:
         return allow(is_agy)
     try:
-        text = last_text(t_path)
+        text, user_txt, edited_since_verify = parse_transcript(t_path)
     except OSError:
         return allow(is_agy)
     if not text:
         return allow(is_agy)
 
-    user_txt = last_user_text(t_path, data.get("lastUserInput", ""))
+    if not user_txt:
+        user_txt = data.get("lastUserInput", "")
+
     sid = data.get("conversationId") or data.get("session_id")
     if too_long(text) and not ASKED_DETAIL.search(user_txt):
         os.makedirs(NOTE_DIR, exist_ok=True)
@@ -148,6 +168,14 @@ def main():
             "Вопрос с вариантами написан текстом «1) … 2) …». Развилку задают интерфейсом: вызови AskUserQuestion / ask_question "
             "(2–4 варианта, твой выбор первым с «(Recommended)», при необходимости preview) и спрашивай про цель, а не про шаг.",
         )
+
+    if edited_since_verify and DONE_CLAIM.search(text) and not HONEST_UNCHECKED.search(text):
+        return block(
+            is_agy,
+            "R1: После последней правки файла в этом ходе не было проверки (команды теста/сборки/анализатора), но в ответе заявлено «Готово»/«Починил». "
+            "Либо прогони проверку после последней правки сейчас, либо прямо напиши в ответе, что не проверял («тесты не гонял»).",
+        )
+
     if text.rstrip().endswith("?"):
         return allow(is_agy)
     last = [x for x in re.split(r"(?<=[.!])\s+|\n+", text) if x.strip()][-2:]

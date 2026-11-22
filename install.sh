@@ -9,7 +9,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 mkdir -p "$REPO/rules"
 {
   printf '%s\n\n' '<!-- Generated from core.md by install.sh; edit core.md. -->'
-  cp "$REPO/core.md" /dev/stdout
+  cat "$REPO/core.md"
 } > "$REPO/rules/AGENTS.md"
 echo "✓ $REPO/rules/AGENTS.md"
 

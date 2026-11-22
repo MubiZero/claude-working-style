@@ -3,5 +3,6 @@ name: working-style
 description: Полные правила рабочего стиля (слои R/T/L) и кейсы к ним. Читать, когда правило ядра неясно, при дизайне экрана или потока (T23–T25), планировании, автономной работе (T22) или споре о том, как поступить.
 ---
 
-Ядро правил уже в контексте (SessionStart). Здесь — полная версия: [WORKING-STYLE.md](WORKING-STYLE.md),
+Ядро правил уже в контексте (SessionStart / rules/AGENTS.md). Здесь — полная версия: [WORKING-STYLE.md](WORKING-STYLE.md),
+протокол редактуры прозы и фактчека — [ANTI-SLOP.md](ANTI-SLOP.md) (линтер текста: `scripts/prose_check.py`),
 кейсы к правилам — [CASES.md](CASES.md). Читай нужный раздел, не весь файл.

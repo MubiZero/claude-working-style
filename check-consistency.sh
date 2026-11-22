@@ -76,4 +76,30 @@ PY
 [ "$(run_agy $'Готово. Дальше беру склад.')" = "continue" ] || bad "AGY-хук не поймал объявление следующего шага"
 [ "$(run_agy 'Готово, тесты не гонял. Запушить?')" = "allow" ] || bad "AGY-хук ложно сработал на обычный вопрос"
 
-[ "$fail" = 0 ] && echo "✓ правила и хуки (Claude + Antigravity) согласованы" || exit 1
+# 5. R1 stale-verification guard: правка после теста без новой проверки блокирует «Готово», если не сказано «тесты не гонял».
+python3 - "$tmp/stale.jsonl" <<'PY'
+import json, sys
+with open(sys.argv[1], "w") as f:
+    f.write(json.dumps({"type": "USER_INPUT", "content": "почини баг"}) + "\n")
+    f.write(json.dumps({"type": "PLANNER_RESPONSE", "content": "", "tool_calls": [{"name": "run_command"}]}) + "\n")
+    f.write(json.dumps({"type": "PLANNER_RESPONSE", "content": "Готово, починил баг.", "tool_calls": [{"name": "edit_file"}]}) + "\n")
+PY
+stale_res="$(HOME="$tmp" python3 hooks/announce-guard.py <<<"{\"transcriptPath\":\"$tmp/stale.jsonl\",\"conversationId\":\"c2\",\"terminationReason\":\"NO_TOOL_CALL\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("decision",""))')"
+[ "$stale_res" = "continue" ] || bad "R1-хук не поймал «Готово» после правки без повторной проверки"
+
+python3 - "$tmp/honest.jsonl" <<'PY'
+import json, sys
+with open(sys.argv[1], "w") as f:
+    f.write(json.dumps({"type": "USER_INPUT", "content": "почини баг"}) + "\n")
+    f.write(json.dumps({"type": "PLANNER_RESPONSE", "content": "Готово, тесты не гонял.", "tool_calls": [{"name": "edit_file"}]}) + "\n")
+PY
+honest_res="$(HOME="$tmp" python3 hooks/announce-guard.py <<<"{\"transcriptPath\":\"$tmp/honest.jsonl\",\"conversationId\":\"c3\",\"terminationReason\":\"NO_TOOL_CALL\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("decision",""))')"
+[ "$honest_res" = "allow" ] || bad "R1-хук ложно заблокировал честное «тесты не гонял»"
+
+# 6. Anti-slop линтер прозы (prose_check.py) на эталонных фикстурах.
+python3 skills/working-style/scripts/prose_check.py skills/working-style/evals/good_clean.md >/dev/null || bad "prose_check упал на чистом тексте"
+if python3 skills/working-style/scripts/prose_check.py skills/working-style/evals/bad_slop.md >/dev/null 2>&1; then
+  bad "prose_check пропустил нейрослоп в bad_slop.md"
+fi
+
+[ "$fail" = 0 ] && echo "✓ правила, R1-страж, anti-slop линтер и хуки (Claude + Antigravity) согласованы" || exit 1

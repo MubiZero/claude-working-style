@@ -1,7 +1,7 @@
 {
   "name": "working-style",
   "displayName": "Working Style",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Рабочий стиль (Claude Code + Antigravity): короткое ядро правил в каждой сессии и у субагентов, полные правила скиллом по требованию, стиль ответов «Кратко» и хуки (без длинных ответов и объявлений вместо дела)",
   "author": {
     "name": "MubiZero",
