@@ -1,0 +1,17 @@
+{
+  "name": "working-style",
+  "displayName": "Working Style",
+  "version": "2.2.0",
+  "description": "Рабочий стиль (Claude Code + Antigravity): короткое ядро правил в каждой сессии, полные правила и кейсы скиллом по требованию, хуки против длинных ответов и объявлений вместо дела.",
+  "author": {
+    "name": "MubiZero",
+    "url": "https://github.com/MubiZero"
+  },
+  "homepage": "https://github.com/MubiZero/claude-working-style",
+  "repository": "https://github.com/MubiZero/claude-working-style",
+  "suggestedPrompts": [
+    "Проверь задачу по правилам working-style и составь заметку до кода (T23)",
+    "Разбери этот поток глазами человека (T24: шаги, новичок, час пик, ошибка)",
+    "Назови класс этой боли пользователя и ещё два места проекта, где он живёт (T25)"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "working-style-guard": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python3 ./hooks/announce-guard.py",
+        "timeout": 10
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python3 ./hooks/length-note.py",
+        "timeout": 10
+      }
+    ]
+  }
+}
