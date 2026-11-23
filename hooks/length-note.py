@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""UserPromptSubmit (Claude Code) & PreInvocation (Antigravity) hook:
+"""Prompt/PreInvocation hook (Antigravity, Claude Code, and compatible harnesses):
 after an answer longer than 2-3 lines (marked by announce-guard.py), remind once before the next one.
 """
 import json
@@ -7,11 +7,20 @@ import os
 import re
 import sys
 
-NOTE_DIR = os.path.expanduser("~/.claude/hooks")
+
+def resolve_state_dir():
+    env_data = os.environ.get("PLUGIN_DATA", "").strip()
+    if env_data:
+        return env_data
+    xdg = os.environ.get("XDG_STATE_HOME", "").strip() or os.path.expanduser("~/.local/state")
+    return os.path.join(xdg, "working-style")
+
+
+NOTE_DIR = resolve_state_dir()
 LEGACY_NOTE = os.path.join(NOTE_DIR, ".last-answer-long")
 MSG = (
-    "Прошлый ответ был длиннее 2–3 строк. Этот — 2–3 строки, если не просили отчёт или разбор; "
-    "вопрос — только интерфейсом AskUserQuestion / ask_question (мой выбор первым), не текстом «1) … 2) …»."
+    "Прошлый ответ был длиннее 2–3 строк. Этот держи в 2–3 строках, если не просили отчёт или разбор; "
+    "вопрос задавай интерфейсом хоста (мой выбор первым), а не текстом «1) … 2) …»."
 )
 
 

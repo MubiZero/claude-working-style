@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Проверка согласованности правил: падает, если ядро, стиль, манифесты или хуки снова расходятся.
+# Проверка согласованности правил: падает, если ядро, стиль, манифесты или хуки расходятся.
 #   ./check-consistency.sh        — проверить
 #   ./check-consistency.sh sync   — скопировать блок маршрутизации из core.md в стиль и пересобрать AGENTS.md + rules/AGENTS.md
 set -euo pipefail
@@ -24,10 +24,10 @@ fi
 # 1. Блок маршрутизации в ядре и в стиле одинаковый.
 [ "$(block core.md)" = "$(block output-styles/kratko.md)" ] || bad "блок routing в core.md и kratko.md разошёлся (./check-consistency.sh sync)"
 
-# 2. Запрещённые формулы: просьба спрашивать вариантами текстом.
-if rg -n "вариантами «1\)|вариантами 1/2/3|варианты 1/2/3" core.md output-styles hooks AGENTS.md rules/AGENTS.md >/dev/null 2>&1; then
-  rg -n "вариантами «1\)|вариантами 1/2/3|варианты 1/2/3" core.md output-styles hooks AGENTS.md rules/AGENTS.md || true
-  bad "правило велит спрашивать вариантами текстом; вопрос — только AskUserQuestion / ask_question"
+# 2. Запрещённые формулы: просьба спрашивать вариантами текстом и старое имя claude-working-style.
+if rg -n "вариантами «1\)|вариантами 1/2/3|варианты 1/2/3|claude-working-style" core.md output-styles hooks AGENTS.md rules/AGENTS.md README.md plugin.json .claude-plugin install.sh skills >/dev/null 2>&1; then
+  rg -n "вариантами «1\)|вариантами 1/2/3|варианты 1/2/3|claude-working-style" core.md output-styles hooks AGENTS.md rules/AGENTS.md README.md plugin.json .claude-plugin install.sh skills || true
+  bad "найдены запрещённые формулы или старое имя claude-working-style"
 fi
 
 # 3. AGENTS.md и rules/AGENTS.md собраны из актуального core.md.
@@ -41,9 +41,8 @@ v1="$(python3 -c 'import json; print(json.load(open("plugin.json"))["version"])'
 v2="$(python3 -c 'import json; print(json.load(open(".claude-plugin/plugin.json"))["version"])')"
 [ "$v1" = "$v2" ] || bad "версии plugin.json ($v1) и .claude-plugin/plugin.json ($v2) расходятся"
 
-# 4. Хук ловит текстовые варианты и объявления в форматах Claude Code и Antigravity.
+# 4. Хук ловит текстовые варианты и объявления в форматах Claude Code и Antigravity + пишет состояние в XDG.
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/.claude/hooks"
 
 run_claude() { # $1 = текст ответа; печатает код выхода хука
   python3 - "$1" "$tmp/t.jsonl" <<'PY'
@@ -53,7 +52,7 @@ with open(path, "w") as f:
     f.write(json.dumps({"type": "user", "message": {"content": "привет"}}) + "\n")
     f.write(json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}}) + "\n")
 PY
-  HOME="$tmp" python3 hooks/announce-guard.py <<<"{\"transcript_path\":\"$tmp/t.jsonl\",\"session_id\":\"s1\"}" >/dev/null 2>&1 && echo 0 || echo $?
+  HOME="$tmp" XDG_STATE_HOME="$tmp/state" python3 hooks/announce-guard.py <<<"{\"transcript_path\":\"$tmp/t.jsonl\",\"session_id\":\"s1\"}" >/dev/null 2>&1 && echo 0 || echo $?
 }
 
 run_agy() { # $1 = текст ответа; печатает decision из stdout JSON
@@ -64,7 +63,7 @@ with open(path, "w") as f:
     f.write(json.dumps({"type": "USER_INPUT", "content": "привет"}) + "\n")
     f.write(json.dumps({"type": "PLANNER_RESPONSE", "content": text}) + "\n")
 PY
-  HOME="$tmp" python3 hooks/announce-guard.py <<<"{\"transcriptPath\":\"$tmp/agy.jsonl\",\"conversationId\":\"c1\",\"terminationReason\":\"NO_TOOL_CALL\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("decision",""))'
+  HOME="$tmp" XDG_STATE_HOME="$tmp/state" python3 hooks/announce-guard.py <<<"{\"transcriptPath\":\"$tmp/agy.jsonl\",\"conversationId\":\"c1\",\"terminationReason\":\"NO_TOOL_CALL\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("decision",""))'
 }
 
 [ "$(run_claude $'Что делаем дальше? 1) окно киоска 2) экран игрока')" = 2 ] || bad "Claude-хук не поймал «1) … 2) …»"
@@ -84,7 +83,7 @@ with open(sys.argv[1], "w") as f:
     f.write(json.dumps({"type": "PLANNER_RESPONSE", "content": "", "tool_calls": [{"name": "run_command"}]}) + "\n")
     f.write(json.dumps({"type": "PLANNER_RESPONSE", "content": "Готово, починил баг.", "tool_calls": [{"name": "edit_file"}]}) + "\n")
 PY
-stale_res="$(HOME="$tmp" python3 hooks/announce-guard.py <<<"{\"transcriptPath\":\"$tmp/stale.jsonl\",\"conversationId\":\"c2\",\"terminationReason\":\"NO_TOOL_CALL\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("decision",""))')"
+stale_res="$(HOME="$tmp" XDG_STATE_HOME="$tmp/state" python3 hooks/announce-guard.py <<<"{\"transcriptPath\":\"$tmp/stale.jsonl\",\"conversationId\":\"c2\",\"terminationReason\":\"NO_TOOL_CALL\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("decision",""))')"
 [ "$stale_res" = "continue" ] || bad "R1-хук не поймал «Готово» после правки без повторной проверки"
 
 python3 - "$tmp/honest.jsonl" <<'PY'
@@ -93,13 +92,13 @@ with open(sys.argv[1], "w") as f:
     f.write(json.dumps({"type": "USER_INPUT", "content": "почини баг"}) + "\n")
     f.write(json.dumps({"type": "PLANNER_RESPONSE", "content": "Готово, тесты не гонял.", "tool_calls": [{"name": "edit_file"}]}) + "\n")
 PY
-honest_res="$(HOME="$tmp" python3 hooks/announce-guard.py <<<"{\"transcriptPath\":\"$tmp/honest.jsonl\",\"conversationId\":\"c3\",\"terminationReason\":\"NO_TOOL_CALL\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("decision",""))')"
+honest_res="$(HOME="$tmp" XDG_STATE_HOME="$tmp/state" python3 hooks/announce-guard.py <<<"{\"transcriptPath\":\"$tmp/honest.jsonl\",\"conversationId\":\"c3\",\"terminationReason\":\"NO_TOOL_CALL\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("decision",""))')"
 [ "$honest_res" = "allow" ] || bad "R1-хук ложно заблокировал честное «тесты не гонял»"
 
-# 6. Anti-slop линтер прозы (prose_check.py) на эталонных фикстурах.
-python3 skills/working-style/scripts/prose_check.py skills/working-style/evals/good_clean.md >/dev/null || bad "prose_check упал на чистом тексте"
+# 6. Anti-slop линтер прозы (prose_check.py) на эталонных фикстурах и живых доках.
+python3 skills/working-style/scripts/prose_check.py skills/working-style/evals/good_clean.md README.md skills/working-style/WORKING-STYLE.md skills/working-style/SKILL.md skills/working-style/CASES.md >/dev/null || bad "prose_check упал на чистом тексте"
 if python3 skills/working-style/scripts/prose_check.py skills/working-style/evals/bad_slop.md >/dev/null 2>&1; then
   bad "prose_check пропустил нейрослоп в bad_slop.md"
 fi
 
-[ "$fail" = 0 ] && echo "✓ правила, R1-страж, anti-slop линтер и хуки (Claude + Antigravity) согласованы" || exit 1
+[ "$fail" = 0 ] && echo "✓ универсальные правила, R1-страж, anti-slop линтер и хуки согласованы" || exit 1

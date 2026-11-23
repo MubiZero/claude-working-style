@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Stop hook (Claude Code & Antigravity):
+"""Stop hook (Antigravity, Claude Code, and compatible JSONL/stdin harnesses):
 1) The turn may not end long (>4 lines or >450 chars unasked) -> marks note for next turn reminder.
-2) The turn may not offer choices as plain text («1) … 2) …») instead of AskUserQuestion / ask_question.
+2) The turn may not offer choices as plain text («1) … 2) …») instead of the host interactive choice UI.
 3) The turn may not end on an announced next step («Дальше беру X», «Начинаю Y») that was never started.
 4) R1 stale-verification guard: if files were edited in this turn AFTER the last verification command (or with no
    verification command after the edit) and the response claims completion («Готово», «Починил», «Исправил», «Всё работает»)
@@ -12,7 +12,16 @@ import os
 import re
 import sys
 
-NOTE_DIR = os.path.expanduser("~/.claude/hooks")
+
+def resolve_state_dir():
+    env_data = os.environ.get("PLUGIN_DATA", "").strip()
+    if env_data:
+        return env_data
+    xdg = os.environ.get("XDG_STATE_HOME", "").strip() or os.path.expanduser("~/.local/state")
+    return os.path.join(xdg, "working-style")
+
+
+NOTE_DIR = resolve_state_dir()
 LEGACY_NOTE = os.path.join(NOTE_DIR, ".last-answer-long")
 
 VERBS = r"(беру|берусь|делаю|начинаю|займусь|приступаю|перехожу|запускаю|чиню|сделаю|начну|возьмусь|запущу|подключу)"
@@ -35,7 +44,7 @@ HONEST_UNCHECKED = re.compile(
     re.IGNORECASE,
 )
 
-EDIT_TOOLS = {"edit_file", "write_file", "Edit", "MultiEdit", "Write", "NotebookEdit"}
+EDIT_TOOLS = {"edit_file", "write_file", "Edit", "MultiEdit", "Write", "NotebookEdit", "replace_file_content", "multi_replace_file_content", "write_to_file"}
 VERIFY_TOOLS = {"run_command", "Bash"}
 
 
@@ -56,7 +65,7 @@ def tail_lines(path, max_bytes=65536):
         raw = f.read().decode("utf-8", errors="replace")
     lines = raw.splitlines()
     if offset > 0 and lines:
-        lines = lines[1:]  # drop partial first line
+        lines = lines[1:]
     return lines
 
 
@@ -67,54 +76,54 @@ def parse_transcript(path):
     edited_since_verify = False
 
     for line in tail_lines(path):
-            try:
-                e = json.loads(line)
-            except ValueError:
-                continue
-            t = e.get("type")
-            if t == "user":
-                c = e.get("message", {}).get("content")
-                if isinstance(c, str):
-                    user_text = c
+        try:
+            e = json.loads(line)
+        except ValueError:
+            continue
+        t = e.get("type")
+        if t == "user":
+            c = e.get("message", {}).get("content")
+            if isinstance(c, str):
+                user_text = c
+                edited_since_verify = False
+            elif isinstance(c, list):
+                txts = [p.get("text", "") for p in c if isinstance(p, dict) and p.get("type") == "text"]
+                if any(p.strip() for p in txts):
+                    user_text = "\n".join(txts)
                     edited_since_verify = False
-                elif isinstance(c, list):
-                    txts = [p.get("text", "") for p in c if isinstance(p, dict) and p.get("type") == "text"]
-                    if any(p.strip() for p in txts):
-                        user_text = "\n".join(txts)
-                        edited_since_verify = False
-            elif t == "USER_INPUT":
-                c = e.get("content", "")
-                if isinstance(c, str) and c.strip():
-                    user_text = c
-                    edited_since_verify = False
-            elif t == "assistant":
-                content = e.get("message", {}).get("content", [])
-                parts = []
-                for c in content:
-                    if not isinstance(c, dict):
-                        continue
-                    if c.get("type") == "text":
-                        parts.append(c.get("text", ""))
-                    elif c.get("type") == "tool_use":
-                        tname = c.get("name", "")
-                        if tname in EDIT_TOOLS:
-                            edited_since_verify = True
-                        elif tname in VERIFY_TOOLS:
-                            edited_since_verify = False
-                if any(p.strip() for p in parts):
-                    text = "\n".join(parts)
-            elif t == "PLANNER_RESPONSE":
-                c = e.get("content", "")
-                if isinstance(c, str) and c.strip():
-                    text = c
-                for tc in e.get("tool_calls", []) or []:
-                    if not isinstance(tc, dict):
-                        continue
-                    tname = tc.get("name", "") or tc.get("tool_name", "")
+        elif t == "USER_INPUT":
+            c = e.get("content", "")
+            if isinstance(c, str) and c.strip():
+                user_text = c
+                edited_since_verify = False
+        elif t == "assistant":
+            content = e.get("message", {}).get("content", [])
+            parts = []
+            for c in content:
+                if not isinstance(c, dict):
+                    continue
+                if c.get("type") == "text":
+                    parts.append(c.get("text", ""))
+                elif c.get("type") == "tool_use":
+                    tname = c.get("name", "")
                     if tname in EDIT_TOOLS:
                         edited_since_verify = True
                     elif tname in VERIFY_TOOLS:
                         edited_since_verify = False
+            if any(p.strip() for p in parts):
+                text = "\n".join(parts)
+        elif t == "PLANNER_RESPONSE":
+            c = e.get("content", "")
+            if isinstance(c, str) and c.strip():
+                text = c
+            for tc in e.get("tool_calls", []) or []:
+                if not isinstance(tc, dict):
+                    continue
+                tname = tc.get("name", "") or tc.get("tool_name", "")
+                if tname in EDIT_TOOLS:
+                    edited_since_verify = True
+                elif tname in VERIFY_TOOLS:
+                    edited_since_verify = False
 
     return text.strip(), user_text, edited_since_verify
 
@@ -178,14 +187,14 @@ def main():
     if "?" in tail and TEXT_OPTIONS.search(tail):
         return block(
             is_agy,
-            "Вопрос с вариантами написан текстом «1) … 2) …». Развилку задают интерфейсом: вызови AskUserQuestion / ask_question "
-            "(2–4 варианта, твой выбор первым с «(Recommended)», при необходимости preview) и спрашивай про цель, а не про шаг.",
+            "Вопрос с вариантами написан текстом «1) … 2) …». Развилку задают интерфейсом хоста "
+            "(2–4 варианта, твой выбор первым с «(Recommended)») и спрашивают про цель, а не про шаг.",
         )
 
     if edited_since_verify and DONE_CLAIM.search(text) and not HONEST_UNCHECKED.search(text):
         return block(
             is_agy,
-            "R1: После последней правки файла в этом ходе не было проверки (команды теста/сборки/анализатора), но в ответе заявлено «Готово»/«Починил». "
+            "R1: После последней правки файла в этом ходе не было проверки (команды теста, сборки или анализатора), но в ответе заявлено завершение. "
             "Либо прогони проверку после последней правки сейчас, либо прямо напиши в ответе, что не проверял («тесты не гонял»).",
         )
 
@@ -195,9 +204,9 @@ def main():
     if any(ANNOUNCE.search(x) for x in last):
         return block(
             is_agy,
-            "Ход заканчивается объявлением следующего шага, который не начат. Если шаг одобрен — начни его сейчас "
-            "(вызов инструмента или агента) и закончи результатом; если нужен ответ владельца — задай вопрос; "
-            "если шаг уже идёт у агента — скажи «идёт», а не «беру».",
+            "Ход заканчивается объявлением следующего шага, который не начат. Если шаг одобрен: начни его сейчас "
+            "(вызов инструмента или агента) и закончи результатом; если нужен ответ владельца: задай вопрос; "
+            "если шаг уже идёт у агента: скажи «идёт», а не «беру».",
         )
     return allow(is_agy)
 

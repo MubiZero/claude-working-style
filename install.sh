@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Builds AGENTS.md and rules/AGENTS.md from core.md, links ~/.codex/AGENTS.md, and links the plugin into
-# Antigravity (~/.gemini/config/plugins/working-style). Removes legacy ~/.gemini/GEMINI.md symlink if it
-# pointed here so Antigravity does not load the core rules twice. Idempotent.
+# Собирает AGENTS.md и rules/AGENTS.md из core.md и подключает working-style ко всем поддерживаемым ИИ-средам.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +13,6 @@ echo "✓ $REPO/rules/AGENTS.md"
 
 {
   printf '%s\n\n' '<!-- Generated from core.md by install.sh; edit core.md. -->'
-  # For standalone AGENTS.md readers without skills, point at the file next to it.
   sed 's#skill `working-style`#file skills/working-style/WORKING-STYLE.md next to this#' "$REPO/core.md"
 } > "$REPO/AGENTS.md"
 echo "✓ $REPO/AGENTS.md"
@@ -23,19 +20,26 @@ echo "✓ $REPO/AGENTS.md"
 link() {
   mkdir -p "$(dirname "$1")"
   if [ -e "$1" ] && [ ! -L "$1" ]; then
-    echo "• $1 уже есть и не ссылка — не трогаю (добавьте в него строку: см. $REPO/AGENTS.md)"
+    echo "• $1 уже есть и не ссылка, не трогаю (подключи вручную: $2)"
     return
   fi
-  ln -sf "$2" "$1"
+  ln -sfn "$2" "$1"
   echo "✓ $1 -> $2"
 }
 
+# 1. Codex CLI / универсальные читатели ~/.codex/AGENTS.md
 link "$HOME/.codex/AGENTS.md" "$REPO/AGENTS.md"
 
-# Antigravity loads rules/AGENTS.md, skills/working-style, and hooks.json directly from the plugin.
-if [ -L "$HOME/.gemini/GEMINI.md" ] && [ "$(readlink "$HOME/.gemini/GEMINI.md")" = "$REPO/AGENTS.md" ]; then
-  rm -f "$HOME/.gemini/GEMINI.md"
-  echo "✓ удалён дублирующий симлинк $HOME/.gemini/GEMINI.md (правила теперь идут из плагина working-style)"
+# 2. Общий стандарт Agent Skills (Codex, Cursor, OpenCode и совместимые)
+link "$HOME/.agents/skills/working-style" "$REPO/skills/working-style"
+
+# 3. Antigravity: подключаем как плагин; убираем старый симлинк ~/.gemini/GEMINI.md, если он вёл в этот плагин
+if [ -L "$HOME/.gemini/GEMINI.md" ]; then
+  target="$(readlink "$HOME/.gemini/GEMINI.md" || true)"
+  if [ "$target" = "$REPO/AGENTS.md" ] || [ "$target" = "$HOME/claude-working-style/AGENTS.md" ]; then
+    rm -f "$HOME/.gemini/GEMINI.md"
+    echo "✓ удалён дублирующий симлинк $HOME/.gemini/GEMINI.md"
+  fi
 fi
 
 mkdir -p "$HOME/.gemini/config/plugins"

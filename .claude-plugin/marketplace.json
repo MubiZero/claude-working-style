@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "mubizero-working-style",
-  "description": "Персональный рабочий стиль для Claude Code",
+  "description": "Универсальный рабочий стиль для ИИ-агентов (MubiZero/working-style)",
   "owner": {
     "name": "MubiZero",
     "url": "https://github.com/MubiZero"
@@ -10,7 +10,7 @@
     {
       "name": "working-style",
       "source": "./",
-      "description": "Рабочий стиль для Claude Code: короткое ядро правил в каждой сессии и у субагентов, полные правила скиллом по требованию, стиль ответов «Кратко» и хуки (без длинных ответов и объявлений вместо дела)",
+      "description": "Универсальный рабочий стиль для ИИ-агентов: короткое ядро правил, делегирование кода исполнителям, полные правила скиллом и хуки контроля верификации и ответа",
       "category": "productivity"
     }
   ]

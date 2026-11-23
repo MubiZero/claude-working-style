@@ -1,14 +1,14 @@
 {
   "name": "working-style",
   "displayName": "Working Style",
-  "version": "2.3.0",
-  "description": "Рабочий стиль (Claude Code + Antigravity): короткое ядро правил в каждой сессии, полные правила и кейсы скиллом по требованию, хуки против длинных ответов и объявлений вместо дела.",
+  "version": "3.0.0",
+  "description": "Универсальный рабочий стиль для ИИ-агентов (Antigravity, Claude Code, Codex, Cursor, Gemini CLI): короткое ядро правил, полные правила скиллом и хуки контроля ответа и верификации.",
   "author": {
     "name": "MubiZero",
     "url": "https://github.com/MubiZero"
   },
-  "homepage": "https://github.com/MubiZero/claude-working-style",
-  "repository": "https://github.com/MubiZero/claude-working-style",
+  "homepage": "https://github.com/MubiZero/working-style",
+  "repository": "https://github.com/MubiZero/working-style",
   "suggestedPrompts": [
     "Проверь задачу по правилам working-style и составь заметку до кода (T23)",
     "Разбери этот поток глазами человека (T24: шаги, новичок, час пик, ошибка)",

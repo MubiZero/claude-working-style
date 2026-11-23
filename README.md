@@ -1,34 +1,33 @@
 # Working Style
 
-Как ИИ-агент работает со мной: коротко по-русски, проверено до «готово», объём — дешёвым агентам.
+Универсальный набор правил, скилла и хуков для любых ИИ-агентов (Antigravity, Claude Code, Codex, Cursor, Gemini CLI и любых инструментов с `AGENTS.md`): коротко по-русски, проверка после последней правки, оркестратор планирует и проверяет, а код пишут дешёвые исполнители.
 
 ## Установка
+
+Универсальный установщик (Antigravity, Codex и общий стандарт `~/.agents/skills`):
+
+```bash
+git clone https://github.com/MubiZero/working-style ~/projects/working-style && bash ~/projects/working-style/install.sh
+```
 
 Claude Code (на любом устройстве):
 
 ```bash
-claude plugin marketplace add MubiZero/claude-working-style && claude plugin install working-style@mubizero-working-style
+claude plugin marketplace add MubiZero/working-style && claude plugin install working-style@mubizero-working-style
 ```
 
-Codex, Gemini CLI и другие ИИ, которые читают `AGENTS.md`:
-
-```bash
-git clone https://github.com/MubiZero/claude-working-style ~/claude-working-style && ~/claude-working-style/install.sh
-```
+Любой агент с `AGENTS.md`: добавь симлинк или копию `AGENTS.md` из корня репозитория.
 
 ## Что внутри
 
 | Часть | Где | Когда действует |
 |---|---|---|
-| Ядро правил | `core.md` | в каждой сессии и у каждого субагента (хук `SessionStart` / `SubagentStart`, ~100 токенов) |
-| Полные правила и кейсы | скилл `working-style` | подгружаются, когда задача их касается |
-| Стиль ответов «Кратко» | `output-styles/kratko.md` | всегда, пока плагин включён (`force-for-plugin`) |
-| Ход не кончается объявлением | хук `Stop` | шаг «дальше беру X» без начала — ход не закрывается |
-| Длинный ответ | хук `Stop` + `UserPromptSubmit` | напоминание «2–3 строки» перед следующим ответом |
-| Другие ИИ | `AGENTS.md` | `install.sh` кладёт его в `~/.codex/AGENTS.md` и `~/.gemini/GEMINI.md` |
+| Ядро правил | `core.md`, `AGENTS.md`, `rules/AGENTS.md` | в каждой сессии и у каждого субагента |
+| Полные правила и кейсы | скилл `skills/working-style/` | подгружается по требованию |
+| Стиль ответов «Кратко» | `output-styles/kratko.md` | режим кратких ответов (для сред с output-styles) |
+| Хуки контроля ответа и R1 | `hooks/announce-guard.py`, `hooks/length-note.py` | форматы Antigravity и Claude Code; состояние в `$PLUGIN_DATA` или `~/.local/state/working-style` |
+| Инжектор контекста | `hooks/inject-working-style.sh` | JSON для Claude Code или обычный текст (`plain`) |
 
-Личное (стек, секреты, терминал) в плагин не входит: это `~/.claude/CLAUDE.md` и локальные скиллы.
+Правка правил делается только в `core.md` и `skills/working-style/`; `AGENTS.md` и `rules/AGENTS.md` собираются автоматически скриптом `install.sh` или `./check-consistency.sh sync`.
 
-Правка правил — только в `core.md` и `skills/working-style/`; `AGENTS.md` собирается из `core.md` (`install.sh`).
-
-Проверка согласованности (блок «Каналы» в ядре и стиле, запрещённые формулы, AGENTS.md, хук на вариантах текстом): `./check-consistency.sh`; `./check-consistency.sh sync` — пересобрать.
+Проверка согласованности (блок маршрутизации в ядре и стиле, запрещённые формулы, `AGENTS.md`, R1-страж, anti-slop линтер и тесты хуков): `./check-consistency.sh`.
