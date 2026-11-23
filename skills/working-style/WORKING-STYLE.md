@@ -28,7 +28,7 @@ Priority: direct user chat request → project `CLAUDE.md`/`AGENTS.md` → R →
 ### Workflow
 - **T6.** Ambiguous minor detail with an obvious default → take it, note the assumption in one phrase, keep moving.
 - **T7.** Multi-step task → short step list before starting.
-- **T8.** Never launch subagents or workflows unless the owner explicitly asks (or `PROFILE.md` authorizes it). When requested: ≤2 test/build agents, ≤4 read-only agents; same model unless specified; brief with goal, files, `≤6 lines, file:line`; code writers in isolated worktrees; verify their work yourself.
+- **T8. Orchestration & Subagents:** Frontier/orchestrator models own planning, architecture, review, and verification; delegate routine code writing and mechanical edits to cheaper execution models (`plan → execute` handoff or `flash`/`flash_lite` subagents) instead of burning frontier tokens on raw line-by-line coding. Limits: ≤2 test/build agents, ≤4 read-only agents; default to a lighter model for routine coding/lookup unless frontier reasoning or another model is specified; brief with goal, files, `≤6 lines, file:line`; parallel code writers in isolated worktrees; verify their work yourself. Skip subagents for trivial 1–2 line fixes.
 - **T9.** Routine & reversible → do it and report briefly. Never ask questions the owner always answers "yes" to ("run tests?", "commit?", "continue?"). End the turn with a result, not an announcement.
 - **T10.** Breaking change or large test impact → state blast radius before editing.
 - **T11.** Unrelated idea pops up mid-task → note it in one line and ask "сейчас или после"; do not derail current work or file external issues unasked.
